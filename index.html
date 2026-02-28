@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>AI Scene Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+/* ─── Reset & Base ─────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#09090e;color:#e4e4f0;font-family:'Outfit',sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+:root{
+  --bg:#09090e;
+  --s1:#111118;
+  --s2:#18181f;
+  --s3:#20202a;
+  --border:#26262e;
+  --border-hi:#363646;
+  --acc:#ff5c00;
+  --acc-dim:rgba(255,92,0,.18);
+  --acc-glow:rgba(255,92,0,.35);
+  --text:#e4e4f0;
+  --muted:#5a5a6e;
+  --muted-hi:#8888a0;
+  --success:#22c55e;
+  --err:#ef4444;
+  --warn:#f59e0b;
+  --r:12px;
+  --r-lg:20px;
+  --h-header:52px;
+  --h-nav:58px;
+  --h-strip:168px;
+}
+button{font-family:'Outfit',sans-serif;cursor:pointer;border:none;outline:none;background:none}
+input,textarea{font-family:'Outfit',sans-serif;outline:none;border:none;background:none;color:var(--text)}
+textarea{resize:none}
+.hidden{display:none!important}
+
+/* ─── Scrollbar ────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:2px}
+
+/* ─── Connect Screen ───────────────────────────────── */
+#connect-screen{
+  position:fixed;inset:0;z-index:100;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;
+}
+.connect-logo{
+  font-family:'JetBrains Mono',monospace;
+  font-size:1.5rem;font-weight:600;
+  color:var(--acc);
+  letter-spacing:-.02em;
+  margin-bottom:4px;
+}
+.connect-sub{font-size:.8rem;color:var(--muted);margin-bottom:40px;letter-spacing:.04em}
+.connect-card{
+  width:100%;max-width:380px;
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:28px;
+}
+.connect-label{font-size:.75rem;font-weight:600;color:var(--muted-hi);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.connect-input{
+  width:100%;
+  background:var(--s2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px 16px;
+  font-size:.95rem;
+  color:var(--text);
+  transition:border-color .2s;
+  margin-bottom:16px;
+}
+.connect-input:focus{border-color:var(--acc)}
+.btn-connect{
+  width:100%;padding:14px;
+  background:var(--acc);
+  color:#fff;font-weight:600;font-size:1rem;
+  border-radius:10px;
+  transition:opacity .2s,transform .1s;
+  letter-spacing:.01em;
+}
+.btn-connect:active{transform:scale(.98);opacity:.9}
+.btn-connect:disabled{opacity:.5;pointer-events:none}
+.connect-hint{font-size:.75rem;color:var(--muted);text-align:center;margin-top:14px}
+.connect-hint a{color:var(--acc);text-decoration:none}
+.connect-err{color:var(--err);font-size:.8rem;margin-top:10px;text-align:center;min-height:18px}
+
+/* ─── App Shell ────────────────────────────────────── */
+#app{
+  position:fixed;inset:0;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* ─── Header ───────────────────────────────────────── */
+header{
+  height:var(--h-header);
+  background:var(--s1);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 16px;
+  gap:12px;
+  flex-shrink:0;
+  z-index:10;
+}
+.header-logo{
+  font-family:'JetBrains Mono',monospace;
+  font-weight:600;font-size:.95rem;
+  color:var(--acc);flex:1;
+  letter-spacing:-.01em;
+}
+.header-models{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.65rem;color:var(--muted);
+  background:var(--s2);
+  border:1px solid var(--border);
+  border-radius:6px;padding:4px 8px;
+  white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:140px;
+}
+.header-icon-btn{
+  width:36px;height:36px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:8px;font-size:1rem;color:var(--muted-hi);
+  flex-shrink:0;transition:border-color .2s,color .2s;
+}
+.header-icon-btn:active{border-color:var(--acc);color:var(--acc)}
+
+/* ─── Canvas Area ──────────────────────────────────── */
+#canvas-area{
+  flex:1;overflow:hidden;
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  background:repeating-conic-gradient(var(--s1) 0% 25%, var(--s2) 0% 50%) 0 0/20px 20px;
+}
+#main-canvas{
+  max-width:100%;max-height:100%;
+  object-fit:contain;
+  display:block;
+  image-rendering:crisp-edges;
+}
+.canvas-empty{
+  text-align:center;color:var(--muted);pointer-events:none;
+}
+.canvas-empty .ce-icon{font-size:2.5rem;margin-bottom:8px}
+.canvas-empty .ce-txt{font-size:.85rem}
+
+/* ─── Canvas tab bar ───────────────────────────────── */
+#canvas-tabs{
+  display:flex;
+  background:var(--s1);
+  border-bottom:1px solid var(--border);
+  padding:0 12px;
+  gap:4px;
+  flex-shrink:0;
+}
+.ctab{
+  padding:8px 12px;
+  font-size:.78rem;font-weight:500;
+  color:var(--muted);
+  border-bottom:2px solid transparent;
+  transition:color .2s,border-color .2s;
+  white-space:nowrap;
+}
+.ctab.active{color:var(--acc);border-bottom-color:var(--acc)}
+
+/* ─── Prompt Panel ─────────────────────────────────── */
+#prompt-panel{
+  background:var(--s1);
+  border-top:1px solid var(--border);
+  padding:12px 14px;
+  flex-shrink:0;
+}
+#prompt-panel.collapsed #prompt-body{display:none}
+.prompt-header{
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:8px;cursor:pointer;user-select:none;
+}
+.prompt-header-label{
+  font-size:.72rem;font-weight:600;color:var(--muted-hi);
+  letter-spacing:.06em;text-transform:uppercase;flex:1;
+}
+.prompt-toggle{font-size:.8rem;color:var(--muted);transition:transform .2s}
+#prompt-panel.collapsed .prompt-toggle{transform:rotate(180deg)}
+#main-prompt{
+  width:100%;
+  background:var(--s2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:11px 14px;
+  font-size:.9rem;color:var(--text);
+  height:68px;
+  transition:border-color .2s;
+  display:block;
+}
+#main-prompt:focus{border-color:var(--acc)}
+.prompt-actions{display:flex;gap:8px;margin-top:8px}
+.btn-sm{
+  padding:8px 14px;
+  font-size:.78rem;font-weight:500;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:var(--s2);
+  color:var(--text);
+  transition:border-color .2s,background .2s;
+  white-space:nowrap;
+}
+.btn-sm:active{border-color:var(--acc);background:var(--acc-dim)}
+.btn-sm.primary{background:var(--acc);border-color:var(--acc);color:#fff;flex:1}
+.btn-sm.primary:active{opacity:.85;background:var(--acc)}
+.btn-sm:disabled{opacity:.4;pointer-events:none}
+
+/* ─── Layer Strip ──────────────────────────────────── */
+#layer-strip{
+  height:var(--h-strip);
+  flex-shrink:0;
+  background:var(--s1);
+  border-top:1px solid var(--border);
+  display:flex;flex-direction:column;
+}
+.strip-header{
+  display:flex;align-items:center;
+  padding:8px 14px 4px;
+  gap:8px;flex-shrink:0;
+}
+.strip-label{
+  font-size:.72rem;font-weight:600;color:var(--muted-hi);
+  letter-spacing:.06em;text-transform:uppercase;flex:1;
+}
+.strip-actions{display:flex;gap:6px}
+.strip-icon-btn{
+  width:28px;height:28px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:6px;font-size:.85rem;color:var(--muted-hi);
+  transition:border-color .15s;
+}
+.strip-icon-btn:active{border-color:var(--acc)}
+#layers-scroll{
+  flex:1;overflow-x:auto;overflow-y:hidden;
+  display:flex;align-items:center;
+  padding:6px 14px 10px;
+  gap:10px;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+#layers-scroll::-webkit-scrollbar{display:none}
+
+/* ─── Layer Card ───────────────────────────────────── */
+.layer-card{
+  flex-shrink:0;
+  width:108px;height:132px;
+  background:var(--s2);
+  border:1.5px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  cursor:pointer;
+  position:relative;
+  transition:border-color .15s,transform .1s;
+  user-select:none;
+  touch-action:none;
+}
+.layer-card.active-layer{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc-dim)}
+.layer-card.dragging{opacity:.5;transform:scale(.97)}
+.layer-card.drop-target{
+  border-color:var(--acc);
+  background:var(--acc-dim);
+  transform:scale(1.04);
+}
+.layer-card.drop-target::after{
+  content:'MERGE';
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--acc-dim);
+  font-family:'JetBrains Mono',monospace;
+  font-size:.72rem;font-weight:600;
+  color:var(--acc);
+  backdrop-filter:blur(2px);
+  z-index:2;
+}
+.lc-thumb{
+  flex:1;overflow:hidden;position:relative;
+  background:repeating-conic-gradient(#1a1a22 0% 25%,#22222e 0% 50%) 0 0/14px 14px;
+}
+.lc-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.lc-thumb .no-img{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;color:var(--muted);
+}
+.lc-badge{
+  position:absolute;top:4px;left:4px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:.58rem;font-weight:600;
+  padding:2px 5px;border-radius:4px;
+  letter-spacing:.03em;z-index:1;
+}
+.badge-object  {background:#1a3520;color:#4ade80}
+.badge-background{background:#172040;color:#60a5fa}
+.badge-light   {background:#2d2010;color:#fbbf24}
+.badge-combo   {background:#2d1030;color:#c084fc}
+.badge-upload  {background:#1c2030;color:#94a3b8}
+.badge-merged  {background:#302010;color:#fb923c}
+.badge-custom  {background:#202020;color:#a1a1aa}
+.lc-info{
+  height:36px;
+  padding:0 8px;
+  display:flex;align-items:center;gap:4px;
+  border-top:1px solid var(--border);
+  background:var(--s2);
+  flex-shrink:0;
+}
+.lc-name{
+  flex:1;
+  font-size:.7rem;font-weight:500;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-family:'JetBrains Mono',monospace;
+}
+.lc-vis{
+  font-size:.8rem;color:var(--muted);
+  width:18px;height:18px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.lc-ver{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.6rem;color:var(--muted);
+  background:var(--s3);padding:1px 4px;border-radius:3px;
+  flex-shrink:0;
+}
+/* Add layer button card */
+.card-add{
+  flex-shrink:0;width:80px;height:132px;
+  border:1.5px dashed var(--border);
+  border-radius:var(--r);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;cursor:pointer;color:var(--muted);
+  transition:border-color .15s,color .15s;
+}
+.card-add:active{border-color:var(--acc);color:var(--acc)}
+.card-add-icon{font-size:1.3rem}
+.card-add-txt{font-size:.65rem;font-weight:600;letter-spacing:.04em;text-align:center}
+
+/* ─── Bottom Nav ───────────────────────────────────── */
+#bottom-nav{
+  height:var(--h-nav);
+  flex-shrink:0;
+  background:var(--s1);
+  border-top:1px solid var(--border);
+  display:flex;align-items:stretch;
+  padding:0 8px;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.nav-btn{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;
+  color:var(--muted);
+  font-size:.64rem;font-weight:500;
+  letter-spacing:.02em;
+  transition:color .2s;
+  border-radius:8px;
+  -webkit-tap-highlight-color:transparent;
+}
+.nav-btn.active{color:var(--acc)}
+.nav-btn .nicon{font-size:1.35rem;line-height:1}
+.nav-btn.generate-fab{
+  background:var(--acc);color:#fff;
+  border-radius:14px;margin:6px 6px;
+  flex:none;width:72px;
+  font-size:.7rem;font-weight:600;
+  letter-spacing:.02em;
+  transition:opacity .15s,transform .1s;
+}
+.nav-btn.generate-fab:active{transform:scale(.95);opacity:.85}
+.nav-btn.generate-fab .nicon{font-size:1.6rem}
+
+/* ─── Loading Overlay ──────────────────────────────── */
+#loading-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(9,9,14,.85);
+  backdrop-filter:blur(6px);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:16px;
+}
+.loading-spinner{
+  width:44px;height:44px;
+  border:3px solid var(--border);
+  border-top-color:var(--acc);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{
+  font-size:.9rem;color:var(--muted-hi);
+  font-family:'JetBrains Mono',monospace;
+  font-size:.8rem;
+  letter-spacing:.02em;
+}
+
+/* ─── Toast ────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:calc(var(--h-nav) + 12px);left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--s3);border:1px solid var(--border-hi);
+  border-radius:10px;padding:10px 20px;
+  font-size:.85rem;font-weight:500;
+  max-width:90vw;text-align:center;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;
+  z-index:300;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.toast-err{border-color:var(--err);color:var(--err)}
+#toast.toast-ok{border-color:var(--success);color:var(--success)}
+#toast.toast-warn{border-color:var(--warn);color:var(--warn)}
+
+/* ─── Bottom Sheet (Tools) ─────────────────────────── */
+#tools-sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:150;
+  background:var(--s1);
+  border-top:1px solid var(--border);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  transform:translateY(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  max-height:90vh;
+  display:flex;flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+#tools-sheet.open{transform:translateY(0)}
+.sheet-handle{
+  width:40px;height:4px;border-radius:2px;
+  background:var(--border-hi);
+  margin:12px auto 0;flex-shrink:0;cursor:pointer;
+}
+.sheet-header{
+  display:flex;align-items:center;
+  padding:12px 16px 8px;flex-shrink:0;
+  gap:10px;
+}
+.sheet-title{font-size:.95rem;font-weight:600;flex:1}
+.sheet-layer-badge{
+  font-family:'JetBrains Mono',monospace;
+  font-size:.7rem;color:var(--muted-hi);
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:6px;padding:3px 8px;
+  max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.sheet-close{
+  width:32px;height:32px;border-radius:8px;
+  background:var(--s2);border:1px solid var(--border);
+  font-size:1rem;color:var(--muted-hi);
+  display:flex;align-items:center;justify-content:center;
+}
+.sheet-body{
+  flex:1;overflow-y:auto;
+  padding:0 14px 20px;
+  display:flex;flex-direction:column;gap:8px;
+}
+/* Tool accordion item */
+.tool-item{
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+  background:var(--s2);
+}
+.tool-header{
+  display:flex;align-items:center;gap:10px;
+  padding:12px 14px;cursor:pointer;
+  user-select:none;
+}
+.tool-icon{font-size:1.1rem;width:24px;text-align:center}
+.tool-name{font-size:.88rem;font-weight:500;flex:1}
+.tool-chevron{font-size:.75rem;color:var(--muted);transition:transform .2s}
+.tool-item.open .tool-chevron{transform:rotate(180deg)}
+.tool-body{
+  display:none;padding:4px 14px 14px;
+  border-top:1px solid var(--border);
+}
+.tool-item.open .tool-body{display:block}
+.tool-textarea{
+  width:100%;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;
+  font-size:.85rem;color:var(--text);
+  height:64px;margin-bottom:8px;
+  transition:border-color .2s;display:block;
+}
+.tool-textarea:focus{border-color:var(--acc)}
+.tool-actions{display:flex;gap:8px}
+/* Quick prompt special section */
+.quick-section{
+  border:1px solid var(--acc-dim);
+  border-radius:var(--r);
+  background:var(--acc-dim);
+  padding:12px 14px;
+}
+.quick-label{font-size:.75rem;font-weight:600;color:var(--acc);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px}
+/* Undo row */
+.sheet-undo-row{
+  display:flex;gap:8px;padding-top:4px;
+}
+
+/* ─── Merge Dialog ─────────────────────────────────── */
+#merge-dialog{
+  position:fixed;inset:0;z-index:180;
+  display:flex;align-items:flex-end;
+  background:rgba(9,9,14,.7);
+  backdrop-filter:blur(4px);
+}
+.merge-card{
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  width:100%;padding:24px 20px;
+  padding-bottom:max(24px, env(safe-area-inset-bottom));
+}
+.merge-title{font-size:1rem;font-weight:600;margin-bottom:4px}
+.merge-sub{font-size:.82rem;color:var(--muted);margin-bottom:16px}
+.merge-layers-preview{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:16px;
+}
+.merge-thumb{
+  width:72px;height:72px;border-radius:8px;overflow:hidden;
+  border:1px solid var(--border);
+  background:var(--s2);flex-shrink:0;
+}
+.merge-thumb img{width:100%;height:100%;object-fit:cover}
+.merge-arrow{font-size:1.2rem;color:var(--acc)}
+.merge-input{
+  width:100%;background:var(--s2);
+  border:1px solid var(--border);border-radius:10px;
+  padding:11px 14px;font-size:.88rem;color:var(--text);
+  margin-bottom:14px;transition:border-color .2s;
+}
+.merge-input:focus{border-color:var(--acc)}
+.merge-actions{display:flex;gap:10px}
+.btn-merge-ok{
+  flex:1;padding:13px;
+  background:var(--acc);color:#fff;
+  font-weight:600;font-size:.95rem;border-radius:10px;
+  transition:opacity .15s;
+}
+.btn-merge-ok:active{opacity:.85}
+.btn-merge-cancel{
+  padding:13px 20px;
+  background:var(--s2);color:var(--text);
+  border:1px solid var(--border);
+  font-size:.95rem;border-radius:10px;
+}
+
+/* ─── Upload input (hidden) ────────────────────────── */
+#file-upload{display:none}
+
+/* ─── Add Layer Modal ──────────────────────────────── */
+#add-modal{
+  position:fixed;inset:0;z-index:170;
+  display:flex;align-items:flex-end;
+  background:rgba(9,9,14,.7);
+  backdrop-filter:blur(4px);
+}
+.add-card{
+  background:var(--s1);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  width:100%;padding:20px;
+  padding-bottom:max(20px,env(safe-area-inset-bottom));
+}
+.add-title{font-size:.95rem;font-weight:600;margin-bottom:14px}
+.add-options{display:flex;flex-direction:column;gap:10px}
+.add-opt{
+  display:flex;align-items:center;gap:12px;
+  padding:14px;background:var(--s2);
+  border:1px solid var(--border);border-radius:var(--r);
+  cursor:pointer;transition:border-color .15s;
+}
+.add-opt:active{border-color:var(--acc)}
+.add-opt-icon{font-size:1.5rem;width:32px;text-align:center}
+.add-opt-info{flex:1}
+.add-opt-name{font-size:.9rem;font-weight:500}
+.add-opt-desc{font-size:.75rem;color:var(--muted);margin-top:2px}
+
+/* ─── Settings overlay ─────────────────────────────── */
+#settings-overlay{
+  position:fixed;inset:0;z-index:160;
+  display:flex;align-items:flex-end;
+  background:rgba(9,9,14,.7);
+  backdrop-filter:blur(4px);
+}
+.settings-card{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  width:100%;padding:20px;
+  padding-bottom:max(20px,env(safe-area-inset-bottom));
+}
+.settings-title{font-size:.95rem;font-weight:600;margin-bottom:16px}
+.settings-row{margin-bottom:12px}
+.settings-lbl{font-size:.72rem;font-weight:600;color:var(--muted-hi);letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+.settings-input{
+  width:100%;background:var(--s2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;font-size:.88rem;color:var(--text);
+  transition:border-color .2s;display:block;
+}
+.settings-input:focus{border-color:var(--acc)}
+.settings-disconnect{
+  margin-top:4px;width:100%;padding:12px;
+  background:rgba(239,68,68,.12);color:var(--err);
+  border:1px solid rgba(239,68,68,.3);border-radius:10px;
+  font-weight:500;font-size:.9rem;
+  transition:background .2s;
+}
+.settings-disconnect:active{background:rgba(239,68,68,.22)}
+
+/* ─── Generate Single Sheet ────────────────────────── */
+#gen-sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:155;
+  background:var(--s1);
+  border-top:1px solid var(--border);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;
+  transform:translateY(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  padding:0 16px max(20px,env(safe-area-inset-bottom));
+  max-height:80vh;display:flex;flex-direction:column;
+}
+#gen-sheet.open{transform:translateY(0)}
+.gen-sheet-handle{width:40px;height:4px;border-radius:2px;background:var(--border-hi);margin:12px auto 10px;flex-shrink:0}
+.gen-sheet-header{
+  display:flex;align-items:center;gap:10px;
+  padding-bottom:10px;flex-shrink:0;border-bottom:1px solid var(--border);
+}
+.gen-sheet-title{font-size:.95rem;font-weight:600;flex:1}
+.gen-sheet-body{flex:1;overflow-y:auto;padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.gen-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gen-type-btn{
+  padding:12px 8px;background:var(--s2);
+  border:1.5px solid var(--border);border-radius:var(--r);
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  cursor:pointer;transition:border-color .15s;
+}
+.gen-type-btn:active{border-color:var(--acc)}
+.gen-type-btn.sel{border-color:var(--acc);background:var(--acc-dim)}
+.gen-type-icon{font-size:1.3rem}
+.gen-type-name{font-size:.75rem;font-weight:500}
+.gen-prompt-area{
+  width:100%;background:var(--bg);
+  border:1px solid var(--border);border-radius:10px;
+  padding:11px 14px;font-size:.88rem;color:var(--text);
+  height:80px;transition:border-color .2s;display:block;
+}
+.gen-prompt-area:focus{border-color:var(--acc)}
+</style>
+
+</style>
+</head>
+<body>
+
+<!-- ═══ Connect Screen ═══════════════════════════════════════ -->
+<div id="connect-screen">
+  <div class="connect-logo">🎨 AI SCENE STUDIO</div>
+  <div class="connect-sub">POWERED BY GEMINI · NANO BANANA</div>
+  <div class="connect-card">
+    <div class="connect-label">Gemini API Key</div>
+    <input id="key-input" class="connect-input" type="password" placeholder="AIza..." autocomplete="off">
+    <button id="connect-btn" class="btn-connect">Подключиться</button>
+    <div id="connect-err" class="connect-err"></div>
+  </div>
+  <div class="connect-hint">Получить ключ: <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a></div>
+</div>
+
+<!-- ═══ App ═══════════════════════════════════════════════════ -->
+<div id="app" class="hidden">
+
+  <!-- Header -->
+  <header>
+    <div class="header-logo">🎨 SCENE STUDIO</div>
+    <div class="header-models" id="header-models">connecting…</div>
+    <button class="header-icon-btn" id="btn-settings">⚙</button>
+  </header>
+
+  <!-- Canvas tabs -->
+  <div id="canvas-tabs">
+    <button class="ctab active" data-view="composite">Composite</button>
+    <button class="ctab" data-view="active">Активный слой</button>
+  </div>
+
+  <!-- Canvas -->
+  <div id="canvas-area">
+    <div class="canvas-empty" id="canvas-empty">
+      <div class="ce-icon">🖼</div>
+      <div class="ce-txt">Сгенерируйте сцену или загрузите фото</div>
+    </div>
+    <canvas id="main-canvas" width="512" height="512"></canvas>
+  </div>
+
+  <!-- Prompt panel -->
+  <div id="prompt-panel">
+    <div class="prompt-header" id="prompt-toggle">
+      <span class="prompt-header-label">Промпт сцены</span>
+      <span class="prompt-toggle">▾</span>
+    </div>
+    <div id="prompt-body">
+      <textarea id="main-prompt" placeholder="e.g. a lone astronaut on a red desert planet at sunset, dramatic clouds…"></textarea>
+      <div class="prompt-actions">
+        <button class="btn-sm" id="btn-improve-main">✨ Улучшить</button>
+        <button class="btn-sm" id="btn-decompose">↙ Разложить</button>
+        <button class="btn-sm primary" id="btn-generate-all">▶ Генерировать всё</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layer Strip -->
+  <div id="layer-strip">
+    <div class="strip-header">
+      <span class="strip-label">Слои</span>
+      <div class="strip-actions">
+        <button class="strip-icon-btn" id="btn-add-layer" title="Добавить слой">＋</button>
+        <button class="strip-icon-btn" id="btn-upload-strip" title="Загрузить фото">📷</button>
+      </div>
+    </div>
+    <div id="layers-scroll">
+      <div class="card-add" id="card-add-btn">
+        <div class="card-add-icon">＋</div>
+        <div class="card-add-txt">ДОБАВИТЬ<br>СЛОЙ</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-nav="canvas">
+      <span class="nicon">🖼</span><span>Canvas</span>
+    </button>
+    <button class="nav-btn" data-nav="tools" id="nav-tools-btn">
+      <span class="nicon">🛠</span><span>Инструменты</span>
+    </button>
+    <button class="nav-btn generate-fab" id="nav-gen-btn">
+      <span class="nicon">⚡</span><span>Generate</span>
+    </button>
+    <button class="nav-btn" data-nav="export" id="nav-export-btn">
+      <span class="nicon">📁</span><span>Экспорт</span>
+    </button>
+    <button class="nav-btn" data-nav="settings">
+      <span class="nicon">⚙</span><span>API</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- ═══ Loading Overlay ═══════════════════════════════════════ -->
+<div id="loading-overlay" class="hidden">
+  <div class="loading-spinner"></div>
+  <div class="loading-msg" id="loading-msg">Генерируем…</div>
+</div>
+
+<!-- ═══ Toast ═════════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- ═══ Tools Bottom Sheet ════════════════════════════════════ -->
+<div id="tools-sheet">
+  <div class="sheet-handle" id="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">AI Инструменты</div>
+    <div class="sheet-layer-badge" id="tools-layer-name">—</div>
+    <button class="sheet-close" id="close-tools">✕</button>
+  </div>
+  <div class="sheet-body" id="tools-body">
+
+    <!-- Quick prompt -->
+    <div class="quick-section">
+      <div class="quick-label">⚡ Быстрый промпт</div>
+      <textarea class="tool-textarea" id="quick-prompt" placeholder="e.g. make it night, add fog, turn the sky purple…" style="height:56px;background:rgba(0,0,0,.3)"></textarea>
+      <div class="tool-actions">
+        <button class="btn-sm" id="btn-quick-improve">✨</button>
+        <button class="btn-sm primary" id="btn-quick-apply">▶ Применить</button>
+      </div>
+    </div>
+
+    <!-- Tool items -->
+    <div class="tool-item" data-tool="background">
+      <div class="tool-header">
+        <span class="tool-icon">🌄</span>
+        <span class="tool-name">Заменить фон</span>
+        <span class="tool-chevron">▾</span>
+      </div>
+      <div class="tool-body">
+        <textarea class="tool-textarea" placeholder="e.g. dramatic sunset over mountains, photorealistic"></textarea>
+        <div class="tool-actions">
+          <button class="btn-sm">✨ Улучшить</button>
+          <button class="btn-sm primary tool-apply">▶ Применить</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-item" data-tool="lighting">
+      <div class="tool-header">
+        <span class="tool-icon">💡</span>
+        <span class="tool-name">Освещение</span>
+        <span class="tool-chevron">▾</span>
+      </div>
+      <div class="tool-body">
+        <textarea class="tool-textarea" placeholder="e.g. golden hour from the left, soft rim light, neon glow"></textarea>
+        <div class="tool-actions">
+          <button class="btn-sm">✨ Улучшить</button>
+          <button class="btn-sm primary tool-apply">▶ Применить</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-item" data-tool="object">
+      <div class="tool-header">
+        <span class="tool-icon">✏️</span>
+        <span class="tool-name">Редактировать объект</span>
+        <span class="tool-chevron">▾</span>
+      </div>
+      <div class="tool-body">
+        <textarea class="tool-textarea" placeholder="e.g. change the jacket to red leather, add sunglasses"></textarea>
+        <div class="tool-actions">
+          <button class="btn-sm">✨ Улучшить</button>
+          <button class="btn-sm primary tool-apply">▶ Применить</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-item" data-tool="remove">
+      <div class="tool-header">
+        <span class="tool-icon">🧹</span>
+        <span class="tool-name">Удалить объект</span>
+        <span class="tool-chevron">▾</span>
+      </div>
+      <div class="tool-body">
+        <textarea class="tool-textarea" placeholder="e.g. the car in the background, power lines in the sky"></textarea>
+        <div class="tool-actions">
+          <button class="btn-sm">✨ Улучшить</button>
+          <button class="btn-sm primary tool-apply">▶ Применить</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-item" data-tool="style">
+      <div class="tool-header">
+        <span class="tool-icon">🎨</span>
+        <span class="tool-name">Стилизация</span>
+        <span class="tool-chevron">▾</span>
+      </div>
+      <div class="tool-body">
+        <textarea class="tool-textarea" placeholder="e.g. oil painting, anime style, 35mm film grain, cyberpunk"></textarea>
+        <div class="tool-actions">
+          <button class="btn-sm">✨ Улучшить</button>
+          <button class="btn-sm primary tool-apply">▶ Применить</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tool-item" data-tool="colorgrade">
+      <div class="tool-header">
+        <span class="tool-icon">🎞</span>
+        <span class="tool-name">Цветокоррекция</span>
+        <span class="tool-chevron">▾</span>
+      </div>
+      <div class="tool-body">
+        <textarea class="tool-textarea" placeholder="e.g. teal and orange cinema look, faded vintage Kodachrome"></textarea>
+        <div class="tool-actions">
+          <button class="btn-sm">✨ Улучшить</button>
+          <button class="btn-sm primary tool-apply">▶ Применить</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Undo / Duplicate -->
+    <div class="sheet-undo-row">
+      <button class="btn-sm" id="btn-undo-layer" style="flex:1">↩ Undo</button>
+      <button class="btn-sm" id="btn-dup-layer" style="flex:1">⎘ Дублировать</button>
+      <button class="btn-sm" id="btn-del-layer" style="color:var(--err);flex:1">🗑 Удалить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Merge Dialog ══════════════════════════════════════════ -->
+<div id="merge-dialog" class="hidden">
+  <div class="merge-card">
+    <div class="merge-title">🔀 Объединить слои</div>
+    <div class="merge-sub" id="merge-sub">Перетащите слой на другой чтобы смёрджить</div>
+    <div class="merge-layers-preview">
+      <div class="merge-thumb"><img id="merge-fg-img" src="" alt=""></div>
+      <div style="flex:1;text-align:center">
+        <div class="merge-arrow">⬇</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:4px">сверху</div>
+      </div>
+      <div class="merge-thumb"><img id="merge-bg-img" src="" alt=""></div>
+    </div>
+    <input class="merge-input" id="merge-hint" placeholder="Подсказка для блендинга (необязательно)…" type="text">
+    <div class="merge-actions">
+      <button class="btn-merge-cancel" id="merge-cancel">Отмена</button>
+      <button class="btn-merge-ok" id="merge-confirm">Объединить →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Add Layer Modal ═══════════════════════════════════════ -->
+<div id="add-modal" class="hidden">
+  <div class="add-card">
+    <div class="add-title">Добавить слой</div>
+    <div class="add-options">
+      <div class="add-opt" id="add-opt-upload">
+        <div class="add-opt-icon">📷</div>
+        <div class="add-opt-info">
+          <div class="add-opt-name">Загрузить фото</div>
+          <div class="add-opt-desc">Импорт из галереи или камеры</div>
+        </div>
+        <span style="color:var(--muted)">›</span>
+      </div>
+      <div class="add-opt" id="add-opt-generate">
+        <div class="add-opt-icon">✨</div>
+        <div class="add-opt-info">
+          <div class="add-opt-name">Создать с нуля</div>
+          <div class="add-opt-desc">AI генерация нового слоя</div>
+        </div>
+        <span style="color:var(--muted)">›</span>
+      </div>
+      <div class="add-opt" id="add-modal-close">
+        <div class="add-opt-icon">✕</div>
+        <div class="add-opt-info">
+          <div class="add-opt-name" style="color:var(--muted)">Отмена</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Generate Single Sheet ════════════════════════════════ -->
+<div id="gen-sheet">
+  <div class="gen-sheet-handle"></div>
+  <div class="gen-sheet-header">
+    <div class="gen-sheet-title">✨ Создать слой</div>
+    <button class="sheet-close" id="close-gen-sheet">✕</button>
+  </div>
+  <div class="gen-sheet-body">
+    <div class="gen-type-grid">
+      <button class="gen-type-btn sel" data-gtype="object"><span class="gen-type-icon">🧍</span><span class="gen-type-name">Объект</span></button>
+      <button class="gen-type-btn" data-gtype="background"><span class="gen-type-icon">🌄</span><span class="gen-type-name">Фон</span></button>
+      <button class="gen-type-btn" data-gtype="light"><span class="gen-type-icon">💡</span><span class="gen-type-name">Свет</span></button>
+      <button class="gen-type-btn" data-gtype="combo"><span class="gen-type-icon">🖼</span><span class="gen-type-name">Готовая сцена</span></button>
+      <button class="gen-type-btn" data-gtype="custom" style="grid-column:span 2"><span class="gen-type-icon">⚡</span><span class="gen-type-name">Свободный промпт</span></button>
+    </div>
+    <textarea class="gen-prompt-area" id="gen-custom-prompt" placeholder="Промпт для генерации…"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-sm" id="btn-gen-improve">✨ Улучшить промпт</button>
+      <button class="btn-sm primary" id="btn-gen-layer">▶ Создать слой</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Settings Sheet ════════════════════════════════════════ -->
+<div id="settings-overlay" class="hidden">
+  <div class="settings-card">
+    <div class="settings-title">⚙ Настройки</div>
+    <div class="settings-row">
+      <div class="settings-lbl">Image model</div>
+      <input class="settings-input" id="set-img-model" type="text">
+    </div>
+    <div class="settings-row">
+      <div class="settings-lbl">Text model</div>
+      <input class="settings-input" id="set-txt-model" type="text">
+    </div>
+    <div class="settings-row">
+      <div class="settings-lbl">API Key</div>
+      <input class="settings-input" id="set-api-key" type="password">
+    </div>
+    <button class="btn-sm primary" id="btn-save-settings" style="width:100%;margin-bottom:10px;padding:12px">Сохранить</button>
+    <button class="settings-disconnect" id="btn-disconnect">Выйти / сменить ключ</button>
+    <button class="sheet-close" id="close-settings" style="position:absolute;top:16px;right:16px">✕</button>
+  </div>
+</div>
+
+<!-- Hidden upload input -->
+<input type="file" id="file-upload" accept="image/*">
+
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+const APP = {
+  apiKey: '',
+  imageModel: 'gemini-2.5-flash-image',
+  textModel: 'gemini-2.0-flash',
+  layers: [],          // [{id,name,type,image,visible,history,version}]
+  activeId: null,
+  canvasView: 'composite',  // composite | active
+  drag: { active:false, sourceId:null, targetId:null, ghost:null, timer:null },
+  merge: { srcId:null, dstId:null },
+  genType: 'object',
+};
+
+// ─── Layer factory ─────────────────────────────────
+let _lid = 0;
+function mkLayer(name, type, image) {
+  return { id: `l${++_lid}`, name, type, image, visible:true, history:[], version:1 };
+}
+function getLayer(id) { return APP.layers.find(l => l.id === id) || null; }
+function getActive() { return getLayer(APP.activeId); }
+
+function pushHistory(layer) {
+  if (!layer.image) return;
+  layer.history.push(layer.image);
+  if (layer.history.length > 12) layer.history.shift();
+}
+function undoLayer(layer) {
+  if (!layer.history.length) return false;
+  layer.image = layer.history.pop();
+  layer.version = Math.max(1, layer.version - 1);
+  return true;
+}
+
+// ═══════════════════════════════════════════════════
+//  API
+// ═══════════════════════════════════════════════════
+async function api(endpoint, body) {
+  const resp = await fetch(`/api/${endpoint}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.detail || JSON.stringify(data));
+  return data;
+}
+
+function basePayload(extra = {}) {
+  return { apiKey: APP.apiKey, imageModel: APP.imageModel, textModel: APP.textModel, ...extra };
+}
+
+// Edit instruction builders
+const NO_CHANGE = 'Keep everything else in the image exactly unchanged.';
+function instrBg(p)      { return `Replace the background with: ${p}. Keep the main subject identical in position and appearance. ${NO_CHANGE}`; }
+function instrLight(p)   { return `Apply this lighting to the image: ${p}. Keep all subjects and composition. ${NO_CHANGE}`; }
+function instrObject(p)  { return `Edit the image: ${p}. Do not change anything else. ${NO_CHANGE}`; }
+function instrRemove(p)  { return `Remove from the image: ${p}. Fill area naturally using surrounding context. ${NO_CHANGE}`; }
+function instrStyle(p)   { return `Apply this art style to the entire image: ${p}. Preserve composition and subjects. ${NO_CHANGE}`; }
+function instrGrade(p)   { return `Apply this color grading: ${p}. Keep content and composition unchanged. ${NO_CHANGE}`; }
+
+const TOOL_INSTRS = {
+  background: instrBg,
+  lighting:   instrLight,
+  object:     instrObject,
+  remove:     instrRemove,
+  style:      instrStyle,
+  colorgrade: instrGrade,
+};
+
+// ═══════════════════════════════════════════════════
+//  CANVAS RENDERING
+// ═══════════════════════════════════════════════════
+const cvs = document.getElementById('main-canvas');
+const ctx = cvs.getContext('2d');
+
+function drawCheckerboard() {
+  const s = 16;
+  for (let x = 0; x < cvs.width; x += s)
+    for (let y = 0; y < cvs.height; y += s) {
+      ctx.fillStyle = ((x/s + y/s) % 2 === 0) ? '#1a1a22' : '#222230';
+      ctx.fillRect(x, y, s, s);
+    }
+}
+
+async function loadImg(src) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = rej;
+    img.src = src;
+  });
+}
+
+async function renderCanvas() {
+  const empty = document.getElementById('canvas-empty');
+  let layers = [];
+
+  if (APP.canvasView === 'composite') {
+    layers = APP.layers.filter(l => l.visible && l.image);
+  } else {
+    const a = getActive();
+    if (a && a.image) layers = [a];
+  }
+
+  if (!layers.length) {
+    cvs.style.display = 'none';
+    empty.style.display = '';
+    return;
+  }
+
+  cvs.style.display = 'block';
+  empty.style.display = 'none';
+
+  // Fit canvas to area
+  const area = document.getElementById('canvas-area');
+  const size = Math.min(area.clientWidth, area.clientHeight, 512);
+  cvs.width = size; cvs.height = size;
+
+  drawCheckerboard();
+  for (const layer of layers) {
+    try {
+      const img = await loadImg(layer.image);
+      const scale = Math.max(size / img.width, size / img.height);
+      const w = img.width * scale, h = img.height * scale;
+      const x = (size - w) / 2, y = (size - h) / 2;
+      ctx.drawImage(img, x, y, w, h);
+    } catch(e) {}
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  LAYER STRIP RENDERING
+// ═══════════════════════════════════════════════════
+const BADGE_CLASS = {
+  object:'badge-object', background:'badge-background',
+  light:'badge-light', combo:'badge-combo',
+  upload:'badge-upload', merged:'badge-merged', custom:'badge-custom',
+};
+
+function renderStrip() {
+  const scroll = document.getElementById('layers-scroll');
+  // Clear existing cards (keep the add card)
+  scroll.querySelectorAll('.layer-card').forEach(c => c.remove());
+
+  const addBtn = document.getElementById('card-add-btn');
+
+  for (const layer of APP.layers) {
+    const card = document.createElement('div');
+    card.className = 'layer-card' + (layer.id === APP.activeId ? ' active-layer' : '');
+    card.dataset.id = layer.id;
+    card.innerHTML = `
+      <div class="lc-thumb">
+        <span class="lc-badge ${BADGE_CLASS[layer.type] || 'badge-custom'}">${layer.type}</span>
+        ${layer.image
+          ? `<img src="${layer.image}" alt="${layer.name}" draggable="false">`
+          : `<div class="no-img">🎨</div>`}
+      </div>
+      <div class="lc-info">
+        <div class="lc-name">${layer.name}</div>
+        <div class="lc-vis">${layer.visible ? '👁' : '○'}</div>
+        <div class="lc-ver">v${layer.version}</div>
+      </div>
+    `;
+
+    // Tap → select + open tools
+    card.addEventListener('click', (e) => {
+      if (APP.drag.active) return;
+      APP.activeId = layer.id;
+      renderStrip();
+      renderCanvas();
+      openTools(layer.id);
+    });
+
+    // Eye toggle (prevent card click)
+    card.querySelector('.lc-vis').addEventListener('click', (e) => {
+      e.stopPropagation();
+      layer.visible = !layer.visible;
+      renderStrip();
+      renderCanvas();
+    });
+
+    initDrag(card, layer.id);
+    scroll.insertBefore(card, addBtn);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  DRAG & DROP (pointer events — works on mobile + desktop)
+// ═══════════════════════════════════════════════════
+let dragState = null;
+
+function initDrag(cardEl, layerId) {
+  let longPressTimer = null;
+  let startX = 0, startY = 0;
+
+  cardEl.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 && e.button !== undefined && e.pointerType === 'mouse') return;
+    startX = e.clientX; startY = e.clientY;
+    longPressTimer = setTimeout(() => {
+      longPressTimer = null;
+      startDrag(e, layerId, cardEl);
+    }, 350);
+  });
+
+  cardEl.addEventListener('pointermove', (e) => {
+    if (!longPressTimer) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    if (Math.hypot(dx, dy) > 8) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  });
+
+  const cancel = () => { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } };
+  cardEl.addEventListener('pointerup', cancel);
+  cardEl.addEventListener('pointercancel', cancel);
+}
+
+function startDrag(e, layerId, cardEl) {
+  if (navigator.vibrate) navigator.vibrate(40);
+
+  const rect = cardEl.getBoundingClientRect();
+  const ghost = cardEl.cloneNode(true);
+  ghost.id = 'drag-ghost';
+  Object.assign(ghost.style, {
+    position:'fixed', width:`${rect.width}px`, height:`${rect.height}px`,
+    top:`${rect.top}px`, left:`${rect.left}px`,
+    opacity:'0.8', pointerEvents:'none', zIndex:'9999',
+    transform:'scale(1.06) rotate(2deg)',
+    boxShadow:'0 12px 32px rgba(0,0,0,.5)',
+    transition:'none', borderRadius:'12px',
+  });
+  document.body.appendChild(ghost);
+
+  cardEl.classList.add('dragging');
+  APP.drag = { active:true, sourceId:layerId, targetId:null, ghost,
+               offX: e.clientX - rect.left, offY: e.clientY - rect.top };
+
+  document.addEventListener('pointermove', onDragMove);
+  document.addEventListener('pointerup', onDragEnd);
+  document.addEventListener('pointercancel', onDragEnd);
+}
+
+function onDragMove(e) {
+  if (!APP.drag.active) return;
+  const { ghost, offX, offY } = APP.drag;
+  ghost.style.left = `${e.clientX - offX}px`;
+  ghost.style.top  = `${e.clientY - offY}px`;
+
+  // Detect target
+  ghost.style.display = 'none';
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  ghost.style.display = '';
+
+  const targetCard = el?.closest('.layer-card[data-id]');
+  const newTargetId = targetCard?.dataset.id || null;
+
+  if (newTargetId !== APP.drag.targetId) {
+    document.querySelectorAll('.layer-card.drop-target').forEach(c => c.classList.remove('drop-target'));
+    if (newTargetId && newTargetId !== APP.drag.sourceId) {
+      targetCard.classList.add('drop-target');
+      APP.drag.targetId = newTargetId;
+    } else {
+      APP.drag.targetId = null;
+    }
+  }
+}
+
+function onDragEnd(e) {
+  if (!APP.drag.active) return;
+  const { sourceId, targetId, ghost } = APP.drag;
+
+  ghost.remove();
+  document.querySelectorAll('.layer-card').forEach(c => c.classList.remove('dragging','drop-target'));
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragEnd);
+
+  APP.drag = { active:false, sourceId:null, targetId:null, ghost:null, timer:null };
+
+  if (targetId && targetId !== sourceId) {
+    showMergeDialog(sourceId, targetId);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  MERGE DIALOG
+// ═══════════════════════════════════════════════════
+function showMergeDialog(srcId, dstId) {
+  const srcL = getLayer(srcId), dstL = getLayer(dstId);
+  if (!srcL || !dstL) return;
+
+  APP.merge = { srcId, dstId };
+  document.getElementById('merge-sub').textContent =
+    `"${srcL.name}" (сверху) на "${dstL.name}" (снизу)`;
+  const fgImg = document.getElementById('merge-fg-img');
+  const bgImg = document.getElementById('merge-bg-img');
+  fgImg.src = srcL.image || '';
+  bgImg.src = dstL.image || '';
+  document.getElementById('merge-hint').value = '';
+  document.getElementById('merge-dialog').classList.remove('hidden');
+}
+
+async function doMerge() {
+  const { srcId, dstId } = APP.merge;
+  const srcL = getLayer(srcId), dstL = getLayer(dstId);
+  if (!srcL?.image || !dstL?.image) return;
+
+  document.getElementById('merge-dialog').classList.add('hidden');
+  const hint = document.getElementById('merge-hint').value;
+  setLoading(true, `Объединяем "${srcL.name}" + "${dstL.name}"…`);
+
+  try {
+    const res = await api('merge', {
+      ...basePayload(),
+      fgImage: srcL.image, bgImage: dstL.image,
+      fgName: srcL.name, bgName: dstL.name, hint,
+    });
+    const merged = mkLayer(`${srcL.name}+${dstL.name}`, 'merged', res.image);
+    APP.layers.push(merged);
+    APP.activeId = merged.id;
+    renderStrip();
+    await renderCanvas();
+    toast('✅ Слои объединены!', 'ok');
+  } catch(err) {
+    toast(`Ошибка: ${err.message}`, 'err');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  TOOLS SHEET
+// ═══════════════════════════════════════════════════
+function openTools(layerId) {
+  const layer = getLayer(layerId);
+  if (!layer) return;
+  document.getElementById('tools-layer-name').textContent = layer.name;
+
+  const undoBtn = document.getElementById('btn-undo-layer');
+  undoBtn.disabled = !layer.history.length;
+
+  document.getElementById('tools-sheet').classList.add('open');
+}
+
+function closeTools() {
+  document.getElementById('tools-sheet').classList.remove('open');
+}
+
+async function applyTool(toolKey, promptText) {
+  const layer = getActive();
+  if (!layer?.image) { toast('Нет активного слоя', 'warn'); return; }
+  if (!promptText.trim()) { toast('Введите промпт', 'warn'); return; }
+
+  const instrFn = TOOL_INSTRS[toolKey];
+  if (!instrFn) return;
+
+  setLoading(true, `Применяем ${toolKey}…`);
+  try {
+    const res = await api('edit', { ...basePayload(), image: layer.image, instruction: instrFn(promptText) });
+    pushHistory(layer);
+    layer.image = res.image;
+    layer.version++;
+    renderStrip();
+    await renderCanvas();
+    document.getElementById('btn-undo-layer').disabled = false;
+    toast('✅ Применено!', 'ok');
+  } catch(err) {
+    toast(`Ошибка: ${err.message}`, 'err');
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function improveToolPrompt(toolItem) {
+  const ta = toolItem.querySelector('textarea');
+  if (!ta.value.trim()) { toast('Введите промпт', 'warn'); return; }
+  setLoading(true, 'Улучшаем промпт…');
+  try {
+    const res = await api('improve', { ...basePayload(), text: ta.value, target: toolItem.dataset.tool });
+    ta.value = res.text;
+    toast('✅ Промпт улучшен', 'ok');
+  } catch(err) {
+    toast(err.message, 'err');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  GENERATE ACTIONS
+// ═══════════════════════════════════════════════════
+async function doGenerateAll() {
+  const prompt = document.getElementById('main-prompt').value.trim();
+  if (!prompt) { toast('Введите промпт', 'warn'); return; }
+
+  setLoading(true, 'Генерируем сцену…');
+  try {
+    const res = await api('generate-all', { ...basePayload(), mainPrompt: prompt });
+    // Add 4 layers
+    const typeNames = { object:'Объект', background:'Фон', light:'Свет', combo:'Combo' };
+    for (const [type, img] of Object.entries(res.layers)) {
+      const layer = mkLayer(typeNames[type] || type, type, img);
+      APP.layers.push(layer);
+    }
+    APP.activeId = APP.layers[APP.layers.length - 1].id;
+    renderStrip();
+    await renderCanvas();
+    toast('✅ Все слои готовы!', 'ok');
+  } catch(err) {
+    toast(`Ошибка: ${err.message}`, 'err');
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function doGenerateLayer(genType, customPrompt) {
+  const mainPrompt = document.getElementById('main-prompt').value.trim();
+
+  setLoading(true, 'Генерируем слой…');
+  try {
+    const res = await api('generate-layer', {
+      ...basePayload(),
+      layerType: genType,
+      mainPrompt: mainPrompt,
+      customPrompt: customPrompt,
+    });
+    const names = { object:'Объект', background:'Фон', light:'Свет', combo:'Combo', custom:'Custom' };
+    const layer = mkLayer(names[genType] || genType, genType, res.image);
+    APP.layers.push(layer);
+    APP.activeId = layer.id;
+    renderStrip();
+    await renderCanvas();
+    toast(`✅ Слой "${layer.name}" создан!`, 'ok');
+  } catch(err) {
+    toast(`Ошибка: ${err.message}`, 'err');
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function doImproveMain() {
+  const ta = document.getElementById('main-prompt');
+  if (!ta.value.trim()) { toast('Введите промпт', 'warn'); return; }
+  setLoading(true, 'Улучшаем промпт…');
+  try {
+    const res = await api('improve', { ...basePayload(), text: ta.value, target: 'scene' });
+    ta.value = res.text;
+    toast('✅ Промпт улучшен', 'ok');
+  } catch(err) {
+    toast(err.message, 'err');
+  } finally {
+    setLoading(false);
+  }
+}
+
+async function doDecompose() {
+  const prompt = document.getElementById('main-prompt').value.trim();
+  if (!prompt) { toast('Введите промпт', 'warn'); return; }
+  setLoading(true, 'Анализируем промпт…');
+  try {
+    const res = await api('decompose', { ...basePayload(), mainPrompt: prompt });
+    const info = Object.entries(res).map(([k,v]) => `${k}: ${v}`).join('\n');
+    toast('✅ Разбито на компоненты', 'ok');
+    console.log('Decomposed:', res);
+  } catch(err) {
+    toast(err.message, 'err');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// Upload photo
+function handleUpload(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const img = new Image();
+    img.onload = () => {
+      // Convert to PNG base64 via canvas
+      const c = document.createElement('canvas');
+      c.width = img.width; c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
+      const b64 = c.toDataURL('image/png');
+      const name = file.name.replace(/\.[^.]+$/, '').slice(0, 20) || 'photo';
+      const layer = mkLayer(name, 'upload', b64);
+      APP.layers.push(layer);
+      APP.activeId = layer.id;
+      renderStrip();
+      renderCanvas();
+      toast(`✅ Загружено: ${name}`, 'ok');
+      closeAddModal();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Export
+function doExport() {
+  const layer = getActive();
+  if (!layer?.image) { toast('Нет активного слоя', 'warn'); return; }
+  const a = document.createElement('a');
+  a.href = layer.image;
+  a.download = `${layer.name.replace(/\s+/g,'_')}_v${layer.version}.png`;
+  a.click();
+}
+
+function doExportComposite() {
+  cvs.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'composite.png'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════════════════════════
+function setLoading(on, msg = '') {
+  const el = document.getElementById('loading-overlay');
+  document.getElementById('loading-msg').textContent = msg;
+  el.classList.toggle('hidden', !on);
+}
+
+let toastTimer = null;
+function toast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ` toast-${type}` : '');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2800);
+}
+
+function showScreen(name) {
+  document.getElementById('connect-screen').classList.toggle('hidden', name !== 'connect');
+  document.getElementById('app').classList.toggle('hidden', name !== 'app');
+}
+
+function closeAddModal() {
+  document.getElementById('add-modal').classList.add('hidden');
+}
+
+function openGenSheet() {
+  document.getElementById('gen-sheet').classList.add('open');
+}
+function closeGenSheet() {
+  document.getElementById('gen-sheet').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT & EVENT WIRING
+// ═══════════════════════════════════════════════════
+function init() {
+  showScreen('connect');
+
+  // ── Connect ──────────────────────────────────────
+  document.getElementById('connect-btn').addEventListener('click', async () => {
+    const key = document.getElementById('key-input').value.trim();
+    if (!key) { document.getElementById('connect-err').textContent = 'Введите API ключ'; return; }
+    const btn = document.getElementById('connect-btn');
+    const err = document.getElementById('connect-err');
+    btn.disabled = true; btn.textContent = 'Подключаемся…'; err.textContent = '';
+    try {
+      const res = await api('connect', { apiKey: key });
+      APP.apiKey = key;
+      APP.imageModel = res.imageModel;
+      APP.textModel  = res.textModel;
+      document.getElementById('header-models').textContent = res.imageModel.replace('gemini-','');
+      document.getElementById('set-img-model').value = res.imageModel;
+      document.getElementById('set-txt-model').value = res.textModel;
+      document.getElementById('set-api-key').value = key;
+      showScreen('app');
+    } catch(e) {
+      err.textContent = e.message;
+      btn.disabled = false; btn.textContent = 'Подключиться';
+    }
+  });
+
+  document.getElementById('key-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('connect-btn').click();
+  });
+
+  // ── Canvas tabs ───────────────────────────────────
+  document.querySelectorAll('.ctab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.ctab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      APP.canvasView = tab.dataset.view;
+      renderCanvas();
+    });
+  });
+
+  // ── Prompt panel toggle ───────────────────────────
+  document.getElementById('prompt-toggle').addEventListener('click', () => {
+    document.getElementById('prompt-panel').classList.toggle('collapsed');
+  });
+
+  // ── Prompt actions ────────────────────────────────
+  document.getElementById('btn-generate-all').addEventListener('click', doGenerateAll);
+  document.getElementById('btn-improve-main').addEventListener('click', doImproveMain);
+  document.getElementById('btn-decompose').addEventListener('click', doDecompose);
+
+  // ── Bottom nav ────────────────────────────────────
+  document.getElementById('nav-tools-btn').addEventListener('click', () => {
+    if (APP.activeId) openTools(APP.activeId);
+    else toast('Выберите слой', 'warn');
+  });
+  document.getElementById('nav-gen-btn').addEventListener('click', openGenSheet);
+  document.getElementById('nav-export-btn').addEventListener('click', () => {
+    doExportComposite();
+  });
+
+  // ── Tools sheet ───────────────────────────────────
+  document.getElementById('close-tools').addEventListener('click', closeTools);
+  document.getElementById('sheet-handle').addEventListener('click', closeTools);
+
+  // Tool accordion
+  document.querySelectorAll('.tool-item').forEach(item => {
+    item.querySelector('.tool-header').addEventListener('click', () => {
+      item.classList.toggle('open');
+    });
+    const applyBtn = item.querySelector('.tool-apply');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', () => {
+        const ta = item.querySelector('textarea');
+        applyTool(item.dataset.tool, ta.value);
+      });
+    }
+    const improveBtn = item.querySelector('.btn-sm:not(.tool-apply)');
+    if (improveBtn) {
+      improveBtn.addEventListener('click', () => improveToolPrompt(item));
+    }
+  });
+
+  // Quick prompt
+  document.getElementById('btn-quick-apply').addEventListener('click', async () => {
+    const layer = getActive();
+    if (!layer?.image) { toast('Нет активного слоя', 'warn'); return; }
+    const prompt = document.getElementById('quick-prompt').value.trim();
+    if (!prompt) { toast('Введите промпт', 'warn'); return; }
+    setLoading(true, 'Применяем…');
+    try {
+      const res = await api('edit', { ...basePayload(), image: layer.image, instruction: prompt + '\n' + 'Keep everything else unchanged.' });
+      pushHistory(layer);
+      layer.image = res.image; layer.version++;
+      renderStrip(); await renderCanvas();
+      document.getElementById('btn-undo-layer').disabled = false;
+      toast('✅ Готово', 'ok');
+    } catch(err) { toast(err.message,'err'); }
+    finally { setLoading(false); }
+  });
+
+  document.getElementById('btn-quick-improve').addEventListener('click', async () => {
+    const ta = document.getElementById('quick-prompt');
+    if (!ta.value.trim()) return;
+    setLoading(true,'Улучшаем…');
+    try {
+      const res = await api('improve',{...basePayload(), text:ta.value, target:'quick'});
+      ta.value = res.text; toast('✅ Улучшено','ok');
+    } catch(e){ toast(e.message,'err'); } finally { setLoading(false); }
+  });
+
+  // Undo / Dup / Del
+  document.getElementById('btn-undo-layer').addEventListener('click', () => {
+    const layer = getActive(); if (!layer) return;
+    if (undoLayer(layer)) { renderStrip(); renderCanvas(); toast('Отменено','ok'); }
+    else toast('Нет истории','warn');
+  });
+  document.getElementById('btn-dup-layer').addEventListener('click', () => {
+    const layer = getActive(); if (!layer) return;
+    const dup = mkLayer(layer.name+'_copy', layer.type, layer.image);
+    APP.layers.push(dup); APP.activeId = dup.id;
+    renderStrip(); renderCanvas(); toast('Слой продублирован','ok');
+  });
+  document.getElementById('btn-del-layer').addEventListener('click', () => {
+    if (!APP.activeId) return;
+    APP.layers = APP.layers.filter(l => l.id !== APP.activeId);
+    APP.activeId = APP.layers.length ? APP.layers[APP.layers.length-1].id : null;
+    renderStrip(); renderCanvas(); closeTools(); toast('Слой удалён','ok');
+  });
+
+  // ── Merge dialog ──────────────────────────────────
+  document.getElementById('merge-confirm').addEventListener('click', doMerge);
+  document.getElementById('merge-cancel').addEventListener('click', () => {
+    document.getElementById('merge-dialog').classList.add('hidden');
+  });
+
+  // ── Add layer modal ───────────────────────────────
+  document.getElementById('btn-add-layer').addEventListener('click', () => {
+    document.getElementById('add-modal').classList.remove('hidden');
+  });
+  document.getElementById('card-add-btn').addEventListener('click', () => {
+    document.getElementById('add-modal').classList.remove('hidden');
+  });
+  document.getElementById('btn-upload-strip').addEventListener('click', () => {
+    document.getElementById('file-upload').click();
+  });
+  document.getElementById('add-opt-upload').addEventListener('click', () => {
+    closeAddModal();
+    document.getElementById('file-upload').click();
+  });
+  document.getElementById('add-opt-generate').addEventListener('click', () => {
+    closeAddModal();
+    openGenSheet();
+  });
+  document.getElementById('add-modal-close').addEventListener('click', closeAddModal);
+
+  // File upload
+  document.getElementById('file-upload').addEventListener('change', (e) => {
+    handleUpload(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  // ── Generate single sheet ─────────────────────────
+  document.getElementById('close-gen-sheet').addEventListener('click', closeGenSheet);
+
+  document.querySelectorAll('.gen-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.gen-type-btn').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      APP.genType = btn.dataset.gtype;
+    });
+  });
+
+  document.getElementById('btn-gen-layer').addEventListener('click', async () => {
+    const customP = document.getElementById('gen-custom-prompt').value.trim();
+    await doGenerateLayer(APP.genType, customP);
+    closeGenSheet();
+  });
+
+  document.getElementById('btn-gen-improve').addEventListener('click', async () => {
+    const ta = document.getElementById('gen-custom-prompt');
+    if (!ta.value.trim()) { toast('Введите промпт','warn'); return; }
+    setLoading(true,'Улучшаем…');
+    try {
+      const res = await api('improve',{...basePayload(), text:ta.value, target:APP.genType});
+      ta.value = res.text; toast('✅ Улучшено','ok');
+    } catch(e){ toast(e.message,'err'); } finally { setLoading(false); }
+  });
+
+  // ── Settings ──────────────────────────────────────
+  document.getElementById('btn-settings').addEventListener('click', () => {
+    document.getElementById('settings-overlay').classList.remove('hidden');
+  });
+  document.getElementById('close-settings').addEventListener('click', () => {
+    document.getElementById('settings-overlay').classList.add('hidden');
+  });
+  document.getElementById('btn-save-settings').addEventListener('click', () => {
+    APP.imageModel = document.getElementById('set-img-model').value.trim() || APP.imageModel;
+    APP.textModel  = document.getElementById('set-txt-model').value.trim() || APP.textModel;
+    const newKey   = document.getElementById('set-api-key').value.trim();
+    if (newKey) APP.apiKey = newKey;
+    document.getElementById('header-models').textContent = APP.imageModel.replace('gemini-','');
+    document.getElementById('settings-overlay').classList.add('hidden');
+    toast('✅ Настройки сохранены','ok');
+  });
+  document.getElementById('btn-disconnect').addEventListener('click', () => {
+    APP.apiKey = ''; APP.layers = []; APP.activeId = null;
+    document.getElementById('settings-overlay').classList.add('hidden');
+    showScreen('connect');
+  });
+
+  // ── Resize handler ────────────────────────────────
+  window.addEventListener('resize', () => renderCanvas());
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
